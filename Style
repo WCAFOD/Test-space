@@ -1,0 +1,1 @@
+body{font-family:Arial;margin:20px;} h1{text-align:center;} .project{border:1px solid #ccc;padding:10px;margin:5px;border-radius:8px;cursor:pointer;} .selected{border-color:green;background:#eaffea;}
