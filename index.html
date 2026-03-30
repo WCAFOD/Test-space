@@ -164,3 +164,54 @@ render(); updateTotals();
 </script>
 </body>
 </html>
+
+
+/* LOAD SAVED SHORTLIST */
+const saved = localStorage.getItem("savedShortlist");
+if (saved) {
+  const parsed = JSON.parse(saved);
+  shortlist = [];
+
+  parsed.forEach(savedTitle => {
+    groups.forEach(g => {
+      g.items.forEach(item => {
+        if (item.title === savedTitle) shortlist.push(item);
+      });
+    });
+  });
+}
+
+/* TILE CLICK HANDLER */
+tile.onclick = () => {
+  const isSelected = shortlist.some(x => x.title === item.title);
+
+  if (isSelected) {
+    shortlist = shortlist.filter(x => x.title !== item.title);
+  } else {
+    shortlist.push(item);
+  }
+
+  // Save shortlist to browser storage
+  localStorage.setItem("savedShortlist", JSON.stringify(shortlist.map(i => i.title)));
+
+  updateTotals();
+  render();
+};
+
+/* SAVE SHORTLIST ON TOTAL UPDATE */
+function updateTotals() {
+  const projectTotal = shortlist.reduce((a,b)=>a+b.cost,0);
+  const escSelected = shortlist.some(i=>i.title==="Every Second Counts");
+  const totalDonation = escSelected ? projectTotal/0.70 : projectTotal*1.10;
+  const totalImpact = shortlist.reduce((a,b)=>a+b.impact,0);
+
+  document.getElementById('totals').innerHTML =
+    "Total Cost*: £" + Math.round(totalDonation).toLocaleString() +
+    "<br>Lives changed: " + totalImpact.toLocaleString();
+
+  document.getElementById('adminNote').innerHTML =
+    "<em>*includes 10% CAFOD Admin fee.</em>";
+
+  // Save shortlist
+  localStorage.setItem("savedShortlist", JSON.stringify(shortlist.map(i => i.title)));
+}
