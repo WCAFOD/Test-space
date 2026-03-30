@@ -16,10 +16,8 @@
 
  /* TILES */
  .tile{padding:18px 55px 18px 18px;margin:10px 0;border-radius:16px;cursor:pointer;transition:.25s;position:relative;color:black;}
- /* REMOVE 40% OPACITY — make unselected tiles solid */
  .tile.unselected{opacity:1;}
  .tile.selected{color:white;}
-
  .checkbox{position:absolute;right:15px;top:50%;transform:translateY(-50%);font-size:26px;pointer-events:none;}
  .innovation.selected .checkbox,.global.selected .checkbox{color:#ffffff;}
  .selected:not(.innovation):not(.global) .checkbox{color:#222544;}
@@ -28,15 +26,16 @@
  /* SHARE BUTTONS */
  .button-row{margin-top:40px;display:flex;justify-content:center;gap:15px;}
  .share-btn{padding:14px 28px;font-size:1.1rem;border:none;border-radius:50px;cursor:pointer;transition:0.3s;font-weight:600;letter-spacing:.5px;}
- .whatsapp-btn{background:#25D366;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.15);} 
- .email-btn{background:#222544;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.15);} 
+ .whatsapp-btn{background:#25D366;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.15);}
+ .email-btn{background:#222544;color:white;box-shadow:0 4px 10px rgba(0,0,0,0.15);}
  .share-btn:hover{transform:translateY(-3px);box-shadow:0 6px 14px rgba(0,0,0,0.25);}
 
- #totals{text-align:center;font-size:1.3rem;margin-top:25px;font-weight:600;} 
+ #totals{text-align:center;font-size:1.3rem;margin-top:25px;font-weight:600;}
  #adminNote{text-align:center;font-size:.9rem;font-style:italic;margin-top:5px;color:#444;}
 </style>
 </head>
 <body>
+
 <h1>2026-27 Proposal Shortlist Tool</h1>
 <div class='subtitle'>Creating a better world together</div>
 
@@ -88,9 +87,33 @@ const groups=[
 
 let shortlist=[];
 
+/* SAVE SHORTLIST */
+function saveShortlist(){
+  localStorage.setItem("cafodShortlist2026", JSON.stringify(shortlist.map(i => i.title)));
+}
+
+/* LOAD SHORTLIST */
+function loadShortlist(){
+  const saved = localStorage.getItem("cafodShortlist2026");
+  if (!saved) return;
+  const titles = JSON.parse(saved);
+
+  shortlist = [];
+
+  groups.forEach(g => {
+    g.items.forEach(item => {
+      if (titles.includes(item.title)) {
+        shortlist.push(item);
+      }
+    });
+  });
+}
+
 /* RENDER TILES */
 function render(){
- const app=document.getElementById('app'); app.innerHTML="";
+ const app=document.getElementById('app'); 
+ app.innerHTML="";
+
  groups.forEach(g=>{
    const header=document.createElement('div');
    header.className='group-header';
@@ -106,12 +129,21 @@ function render(){
      const isSelected=shortlist.includes(item);
      tile.innerHTML=item.title+"<span class='checkbox'>"+(isSelected?"★":"☆")+"</span>";
 
-     if(isSelected){ tile.classList.remove('unselected'); tile.classList.add('selected'); tile.style.background=g.color; }
+     if(isSelected){
+       tile.classList.remove('unselected');
+       tile.classList.add('selected');
+       tile.style.background=g.color;
+     }
 
      tile.onclick=()=>{
-       if(isSelected) shortlist=shortlist.filter(x=>x!==item);
-       else shortlist.push(item);
-       updateTotals(); render();
+       if(isSelected){
+         shortlist=shortlist.filter(x=>x!==item);
+       } else {
+         shortlist.push(item);
+       }
+       saveShortlist();
+       updateTotals();
+       render();
      };
 
      app.appendChild(tile);
@@ -121,8 +153,12 @@ function render(){
 
 function selectAll(groupName){
  const g=groups.find(x=>x.name===groupName);
- g.items.forEach(item=>{ if(!shortlist.includes(item)) shortlist.push(item); });
- updateTotals(); render();
+ g.items.forEach(item=>{
+   if(!shortlist.includes(item)) shortlist.push(item);
+ });
+ saveShortlist();
+ updateTotals();
+ render();
 }
 
 /* DONATION CALCULATION */
@@ -131,87 +167,43 @@ function updateTotals(){
  const escSelected=shortlist.some(i=>i.title==="Every Second Counts");
  const totalDonation=escSelected? projectTotal/0.70 : projectTotal/0.90;
  const totalImpact=shortlist.reduce((a,b)=>a+b.impact,0);
- document.getElementById('totals').innerHTML=`Total Cost*: £${Math.round(totalDonation).toLocaleString()}<br>Lives changed: ${totalImpact.toLocaleString()}`;
+
+ document.getElementById('totals').innerHTML=
+   `Total Cost*: £${Math.round(totalDonation).toLocaleString()}<br>Lives changed: ${totalImpact.toLocaleString()}`;
  document.getElementById('adminNote').innerHTML='<em>*includes 10% Admin fee.</em>';
 }
 
-function resetSelection(){ shortlist=[]; updateTotals(); render(); }
+function resetSelection(){
+ shortlist=[];
+ saveShortlist();
+ updateTotals();
+ render();
+}
 
 /* SHARE MESSAGE */
-
 function buildShareMessage(){
   if (!shortlist.length) return "";
-
-  // Build bullet list
-  const list = shortlist
-      .map(item => "• " + item.title)
-      .join("%0A");
-
-  // Full formatted message
-  const message =
-    "My shortlisted projects for 2026-27..." +
-    "%0A%0A" + list + "%0A%0A" +
-    "Create a shortlist: https://wcafod.github.io/PartnershipProposal2627/";
-
-  return message;
+  const list = shortlist.map(item => "• " + item.title).join("%0A");
+  return "My shortlisted projects for 2026-27..." +
+         "%0A%0A" + list + "%0A%0A" +
+         "Create a shortlist: https://wcafod.github.io/PartnershipProposal2627/";
 }
 
+function shareWhatsApp(){ 
+  if(!shortlist.length) return alert('Select at least one project.');
+  window.open(`https://wa.me/?text=${buildShareMessage()}`); 
+}
 
-function shareWhatsApp(){ if(!shortlist.length) return alert('Select at least one project.'); window.open(`https://wa.me/?text=${buildShareMessage()}`); }
-function shareEmail(){ if(!shortlist.length) return alert('Select at least one project.'); window.location.href=`mailto:?subject=My Shortlisted Projects&body=${buildShareMessage()}`; }
+function shareEmail(){ 
+  if(!shortlist.length) return alert('Select at least one project.');
+  window.location.href=`mailto:?subject=My Shortlisted Projects&body=${buildShareMessage()}`; 
+}
 
-render(); updateTotals();
+/* INITIALISE */
+loadShortlist();
+render();
+updateTotals();
 </script>
+
 </body>
 </html>
-
-
-/* LOAD SAVED SHORTLIST */
-const saved = localStorage.getItem("savedShortlist");
-if (saved) {
-  const parsed = JSON.parse(saved);
-  shortlist = [];
-
-  parsed.forEach(savedTitle => {
-    groups.forEach(g => {
-      g.items.forEach(item => {
-        if (item.title === savedTitle) shortlist.push(item);
-      });
-    });
-  });
-}
-
-/* TILE CLICK HANDLER */
-tile.onclick = () => {
-  const isSelected = shortlist.some(x => x.title === item.title);
-
-  if (isSelected) {
-    shortlist = shortlist.filter(x => x.title !== item.title);
-  } else {
-    shortlist.push(item);
-  }
-
-  // Save shortlist to browser storage
-  localStorage.setItem("savedShortlist", JSON.stringify(shortlist.map(i => i.title)));
-
-  updateTotals();
-  render();
-};
-
-/* SAVE SHORTLIST ON TOTAL UPDATE */
-function updateTotals() {
-  const projectTotal = shortlist.reduce((a,b)=>a+b.cost,0);
-  const escSelected = shortlist.some(i=>i.title==="Every Second Counts");
-  const totalDonation = escSelected ? projectTotal/0.70 : projectTotal*1.10;
-  const totalImpact = shortlist.reduce((a,b)=>a+b.impact,0);
-
-  document.getElementById('totals').innerHTML =
-    "Total Cost*: £" + Math.round(totalDonation).toLocaleString() +
-    "<br>Lives changed: " + totalImpact.toLocaleString();
-
-  document.getElementById('adminNote').innerHTML =
-    "<em>*includes 10% CAFOD Admin fee.</em>";
-
-  // Save shortlist
-  localStorage.setItem("savedShortlist", JSON.stringify(shortlist.map(i => i.title)));
-}
